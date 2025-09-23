@@ -307,51 +307,53 @@
         </div>
     </div>
 
+    <!-- Socket.IO Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    
     <script>
         let socket = null;
         let alertCount = 0;
         let isConnected = false;
         
-        // Initialize WebSocket connection
+        // Initialize Socket.IO connection
         function connectWebSocket() {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/stream`;
+            socket = io();
             
-            socket = new WebSocket(wsUrl);
-            
-            socket.onopen = function() {
+            socket.on('connect', function() {
                 isConnected = true;
                 updateConnectionStatus();
-                console.log('WebSocket connected');
-                requestStatus();
-            };
+                console.log('Socket.IO connected');
+                // Request initial status
+                socket.emit('get_status');
+            });
             
-            socket.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                handleWebSocketMessage(data);
-            };
-            
-            socket.onclose = function() {
+            socket.on('disconnect', function() {
                 isConnected = false;
                 updateConnectionStatus();
-                console.log('WebSocket disconnected');
-                // Attempt to reconnect after 3 seconds
-                setTimeout(connectWebSocket, 3000);
-            };
+                console.log('Socket.IO disconnected');
+            });
             
-            socket.onerror = function(error) {
-                console.error('WebSocket error:', error);
-                isConnected = false;
-                updateConnectionStatus();
-            };
-        }
-        
-        function handleWebSocketMessage(data) {
-            if (data.type === 'status') {
+            socket.on('connected', function(data) {
+                console.log('Server says:', data.data);
+            });
+            
+            socket.on('status', function(data) {
                 updateSystemStatus(data.data);
-            } else if (data.type === 'prediction' || data.type === 'alert') {
+            });
+            
+            socket.on('prediction', function(data) {
                 addAlert(data.data);
-            }
+            });
+            
+            socket.on('alert', function(data) {
+                addAlert(data.data);
+            });
+            
+            socket.on('connect_error', function(error) {
+                console.error('Socket.IO connection error:', error);
+                isConnected = false;
+                updateConnectionStatus();
+            });
         }
         
         function updateConnectionStatus() {
@@ -386,7 +388,7 @@
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert-item ${alertData.risk_level?.toLowerCase() || 'minimal'} fade-in`;
             
-            const timestamp = new Date(alertData.timestamp).toLocaleTimeString();
+            const timestamp = alertData.timestamp || new Date().toLocaleTimeString();
             const isAlert = alertData.alert_triggered;
             
             alertDiv.innerHTML = `
@@ -395,7 +397,7 @@
                         ${isAlert ? '🚨' : '🔍'} ${alertData.process_name} (PID: ${alertData.process_id})
                     </span>
                     <span class="alert-score">
-                        Score: ${(alertData.hybrid_prediction || 0).toFixed(3)}
+                        Score: ${(alertData.hybrid_prediction || alertData.primary_prediction || 0).toFixed(3)}
                     </span>
                 </div>
                 <div class="alert-details">
@@ -442,8 +444,8 @@
         }
         
         function requestStatus() {
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: 'get_status' }));
+            if (socket && socket.connected) {
+                socket.emit('get_status');
             }
         }
         
@@ -457,6 +459,7 @@
             .then(response => response.json())
             .then(data => {
                 console.log('Test alert generated:', data);
+                // Alert should appear via WebSocket automatically
             })
             .catch(error => {
                 console.error('Error generating test alert:', error);
@@ -493,21 +496,6 @@
                 });
         }
         
-        // Simulation control functions
-        function startSimulation(type) {
-            const simulations = {
-                'crypto': { name: 'CryptoLocker', duration: 60 },
-                'locker': { name: 'Screen Locker', duration: 30 },
-                'wiper': { name: 'Data Wiper', duration: 45 }
-            };
-            
-            const sim = simulations[type];
-            if (sim) {
-                alert(`Starting ${sim.name} simulation (${sim.duration}s)...`);
-                // Note: Actual simulation control would need additional endpoints
-            }
-        }
-        
         // Auto-refresh status every 10 seconds
         setInterval(() => {
             if (isConnected) {
@@ -534,61 +522,6 @@
                 connectWebSocket();
             }
         });
-        
-        // Add some demo data for testing
-        function loadDemoData() {
-            const demoAlerts = [
-                {
-                    timestamp: new Date().toISOString(),
-                    process_name: 'chrome.exe',
-                    process_id: 1234,
-                    file_path: 'C:\\Users\\test\\document.pdf',
-                    primary_prediction: 0.15,
-                    hybrid_prediction: 0.12,
-                    risk_level: 'MINIMAL',
-                    confidence: 0.76,
-                    alert_triggered: false
-                },
-                {
-                    timestamp: new Date().toISOString(),
-                    process_name: 'notepad.exe',
-                    process_id: 5678,
-                    file_path: 'C:\\Users\\test\\notes.txt',
-                    primary_prediction: 0.45,
-                    hybrid_prediction: 0.38,
-                    risk_level: 'MEDIUM',
-                    confidence: 0.62,
-                    alert_triggered: false
-                }
-            ];
-            
-            // Add demo status
-            updateSystemStatus({
-                status: 'running',
-                uptime: 3600,
-                total_predictions: 156,
-                alerts_triggered: 3,
-                current_load: {
-                    active_processes: 12
-                },
-                model_info: {
-                    primary_model_loaded: true,
-                    xgb_model_loaded: true,
-                    alert_threshold: 0.24,
-                    feature_count: 13
-                }
-            });
-            
-            // Add demo alerts
-            setTimeout(() => {
-                demoAlerts.forEach((alert, index) => {
-                    setTimeout(() => addAlert(alert), index * 1000);
-                });
-            }, 2000);
-        }
-        
-        // Uncomment to load demo data for testing without server
-        // loadDemoData();
     </script>
 </body>
 </html>
