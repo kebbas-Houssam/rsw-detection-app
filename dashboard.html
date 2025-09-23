@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ransomware Detection Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .status-item {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+        }
+        
+        .status-value {
+            font-size: 2em;
+            font-weight: bold;
+            display: block;
+        }
+        
+        .status-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .alert-feed {
+            grid-column: 1 / -1;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .alert-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 5px solid;
+            background: #f7fafc;
+            transition: all 0.3s ease;
+        }
+        
+        .alert-item.critical {
+            border-left-color: #e53e3e;
+            background: #fed7d7;
+        }
+        
+        .alert-item.high {
+            border-left-color: #dd6b20;
+            background: #feebc8;
+        }
+        
+        .alert-item.medium {
+            border-left-color: #d69e2e;
+            background: #faf089;
+        }
+        
+        .alert-item.low {
+            border-left-color: #38a169;
+            background: #c6f6d5;
+        }
+        
+        .alert-item.minimal {
+            border-left-color: #4299e1;
+            background: #bee3f8;
+        }
+        
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .alert-process {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .alert-score {
+            background: rgba(0,0,0,0.1);
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+        
+        .alert-details {
+            font-size: 0.9em;
+            color: #4a5568;
+            line-height: 1.4;
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        
+        .connected {
+            background: #48bb78;
+        }
+        
+        .disconnected {
+            background: #f56565;
+        }
+        
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            margin: 5px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            .status-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status" id="connectionStatus">
+        <span id="statusText">Connecting...</span>
+    </div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Ransomware Detection Dashboard</h1>
+            <p>Master's Degree Defense - Real-time Threat Detection</p>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" onclick="generateTestAlert()">🚨 Generate Test Alert</button>
+            <button class="btn" onclick="clearAlerts()">🗑️ Clear Alerts</button>
+            <button class="btn" onclick="refreshStatus()">🔄 Refresh Status</button>
+        </div>
+        
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>📊 System Status</h3>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-value" id="uptime">--</span>
+                        <span class="status-label">Uptime (sec)</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-value" id="predictions">--</span>
+                        <span class="status-label">Total Predictions</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-value" id="alerts">--</span>
+                        <span class="status-label">Alerts Triggered</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-value" id="processes">--</span>
+                        <span class="status-label">Active Processes</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>🤖 Model Information</h3>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-value" id="primaryModel">--</span>
+                        <span class="status-label">Primary Model</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-value" id="xgbModel">--</span>
+                        <span class="status-label">XGBoost Model</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-value" id="threshold">--</span>
+                        <span class="status-label">Alert Threshold</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-value" id="features">--</span>
+                        <span class="status-label">Features</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card alert-feed">
+                <h3>🚨 Live Detection Feed</h3>
+                <div id="alertFeed">
+                    <div class="alert-item minimal">
+                        <div class="alert-header">
+                            <span class="alert-process">System Ready</span>
+                            <span class="alert-score">Waiting for data...</span>
+                        </div>
+                        <div class="alert-details">
+                            Ransomware detection system is running and ready to detect threats.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let alertCount = 0;
+        let isConnected = false;
+        
+        // Initialize WebSocket connection
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/stream`;
+            
+            socket = new WebSocket(wsUrl);
+            
+            socket.onopen = function() {
+                isConnected = true;
+                updateConnectionStatus();
+                console.log('WebSocket connected');
+                requestStatus();
+            };
+            
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+            
+            socket.onclose = function() {
+                isConnected = false;
+                updateConnectionStatus();
+                console.log('WebSocket disconnected');
+                // Attempt to reconnect after 3 seconds
+                setTimeout(connectWebSocket, 3000);
+            };
+            
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                isConnected = false;
+                updateConnectionStatus();
+            };
+        }
+        
+        function handleWebSocketMessage(data) {
+            if (data.type === 'status') {
+                updateSystemStatus(data.data);
+            } else if (data.type === 'prediction' || data.type === 'alert') {
+                addAlert(data.data);
+            }
+        }
+        
+        function updateConnectionStatus() {
+            const statusElement = document.getElementById('connectionStatus');
+            const textElement = document.getElementById('statusText');
+            
+            if (isConnected) {
+                statusElement.className = 'connection-status connected';
+                textElement.textContent = '🟢 Connected';
+            } else {
+                statusElement.className = 'connection-status disconnected';
+                textElement.textContent = '🔴 Disconnected';
+            }
+        }
+        
+        function updateSystemStatus(status) {
+            document.getElementById('uptime').textContent = Math.round(status.uptime || 0);
+            document.getElementById('predictions').textContent = status.total_predictions || 0;
+            document.getElementById('alerts').textContent = status.alerts_triggered || 0;
+            document.getElementById('processes').textContent = status.current_load?.active_processes || 0;
+            
+            // Update model information
+            const modelInfo = status.model_info || {};
+            document.getElementById('primaryModel').textContent = modelInfo.primary_model_loaded ? '✅' : '❌';
+            document.getElementById('xgbModel').textContent = modelInfo.xgb_model_loaded ? '✅' : '❌';
+            document.getElementById('threshold').textContent = (modelInfo.alert_threshold || 0).toFixed(2);
+            document.getElementById('features').textContent = modelInfo.feature_count || 0;
+        }
+        
+        function addAlert(alertData) {
+            const feed = document.getElementById('alertFeed');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert-item ${alertData.risk_level?.toLowerCase() || 'minimal'} fade-in`;
+            
+            const timestamp = new Date(alertData.timestamp).toLocaleTimeString();
+            const isAlert = alertData.alert_triggered;
+            
+            alertDiv.innerHTML = `
+                <div class="alert-header">
+                    <span class="alert-process">
+                        ${isAlert ? '🚨' : '🔍'} ${alertData.process_name} (PID: ${alertData.process_id})
+                    </span>
+                    <span class="alert-score">
+                        Score: ${(alertData.hybrid_prediction || 0).toFixed(3)}
+                    </span>
+                </div>
+                <div class="alert-details">
+                    <strong>Risk:</strong> ${alertData.risk_level || 'MINIMAL'} | 
+                    <strong>Confidence:</strong> ${(alertData.confidence || 0).toFixed(2)} | 
+                    <strong>Time:</strong> ${timestamp}<br>
+                    <strong>File:</strong> ${alertData.file_path || 'Unknown'}
+                </div>
+            `;
+            
+            // Insert at top of feed
+            feed.insertBefore(alertDiv, feed.firstChild);
+            
+            // Keep only last 50 alerts
+            const alerts = feed.querySelectorAll('.alert-item');
+            if (alerts.length > 50) {
+                feed.removeChild(alerts[alerts.length - 1]);
+            }
+            
+            // Add pulse animation for critical alerts
+            if (isAlert && alertData.risk_level === 'CRITICAL') {
+                alertDiv.classList.add('pulse');
+                // Show browser notification if available
+                showNotification(alertData);
+            }
+        }
+        
+        function showNotification(alertData) {
+            if ('Notification' in window) {
+                if (Notification.permission === 'granted') {
+                    new Notification('🚨 Ransomware Detected!', {
+                        body: `${alertData.process_name} - Risk: ${alertData.risk_level}`,
+                        icon: '/favicon.ico',
+                        requireInteraction: true
+                    });
+                } else if (Notification.permission !== 'denied') {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            showNotification(alertData);
+                        }
+                    });
+                }
+            }
+        }
+        
+        function requestStatus() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'get_status' }));
+            }
+        }
+        
+        function generateTestAlert() {
+            fetch('/test/alert', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Test alert generated:', data);
+            })
+            .catch(error => {
+                console.error('Error generating test alert:', error);
+                alert('Failed to generate test alert. Make sure the server is running.');
+            });
+        }
+        
+        function clearAlerts() {
+            const feed = document.getElementById('alertFeed');
+            feed.innerHTML = `
+                <div class="alert-item minimal">
+                    <div class="alert-header">
+                        <span class="alert-process">Alert Feed Cleared</span>
+                        <span class="alert-score">Ready</span>
+                    </div>
+                    <div class="alert-details">
+                        Alert history cleared. Monitoring for new threats...
+                    </div>
+                </div>
+            `;
+        }
+        
+        function refreshStatus() {
+            requestStatus();
+            
+            // Also fetch via REST API as backup
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    updateSystemStatus(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching status:', error);
+                });
+        }
+        
+        // Simulation control functions
+        function startSimulation(type) {
+            const simulations = {
+                'crypto': { name: 'CryptoLocker', duration: 60 },
+                'locker': { name: 'Screen Locker', duration: 30 },
+                'wiper': { name: 'Data Wiper', duration: 45 }
+            };
+            
+            const sim = simulations[type];
+            if (sim) {
+                alert(`Starting ${sim.name} simulation (${sim.duration}s)...`);
+                // Note: Actual simulation control would need additional endpoints
+            }
+        }
+        
+        // Auto-refresh status every 10 seconds
+        setInterval(() => {
+            if (isConnected) {
+                requestStatus();
+            }
+        }, 10000);
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            connectWebSocket();
+            updateConnectionStatus();
+            
+            // Request notification permission on load
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+            
+            console.log('Ransomware Detection Dashboard initialized');
+        });
+        
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible' && !isConnected) {
+                connectWebSocket();
+            }
+        });
+        
+        // Add some demo data for testing
+        function loadDemoData() {
+            const demoAlerts = [
+                {
+                    timestamp: new Date().toISOString(),
+                    process_name: 'chrome.exe',
+                    process_id: 1234,
+                    file_path: 'C:\\Users\\test\\document.pdf',
+                    primary_prediction: 0.15,
+                    hybrid_prediction: 0.12,
+                    risk_level: 'MINIMAL',
+                    confidence: 0.76,
+                    alert_triggered: false
+                },
+                {
+                    timestamp: new Date().toISOString(),
+                    process_name: 'notepad.exe',
+                    process_id: 5678,
+                    file_path: 'C:\\Users\\test\\notes.txt',
+                    primary_prediction: 0.45,
+                    hybrid_prediction: 0.38,
+                    risk_level: 'MEDIUM',
+                    confidence: 0.62,
+                    alert_triggered: false
+                }
+            ];
+            
+            // Add demo status
+            updateSystemStatus({
+                status: 'running',
+                uptime: 3600,
+                total_predictions: 156,
+                alerts_triggered: 3,
+                current_load: {
+                    active_processes: 12
+                },
+                model_info: {
+                    primary_model_loaded: true,
+                    xgb_model_loaded: true,
+                    alert_threshold: 0.24,
+                    feature_count: 13
+                }
+            });
+            
+            // Add demo alerts
+            setTimeout(() => {
+                demoAlerts.forEach((alert, index) => {
+                    setTimeout(() => addAlert(alert), index * 1000);
+                });
+            }, 2000);
+        }
+        
+        // Uncomment to load demo data for testing without server
+        // loadDemoData();
+    </script>
+</body>
+</html>
