@@ -167,54 +167,108 @@ class RansomwareSimulator:
                 f.write(content)
         logger.info(f"Created {count} test files in {self.simulation_dir}")
         
+    # def simulate_crypto_ransomware(self, duration=60):
+        # """Simulate CryptoLocker-style ransomware behavior"""
+        # logger.info("Starting CryptoLocker simulation...")
+        # 
+        # def crypto_behavior():
+            # process_name = "crypto_sim.exe"
+            # pid = random.randint(2000, 9999)
+            # 
+            # start_time = time.time()
+            # file_count = 0
+            # 
+            # while time.time() - start_time < duration:
+                # try:
+                    # Select random test file
+                    # files = list(self.simulation_dir.glob("*.txt"))
+                    # if not files:
+                        # break
+                        # 
+                    # target_file = random.choice(files)
+                    # 
+                    # Simulate ransomware I/O pattern
+                    # traces = self._generate_crypto_traces(target_file, process_name, pid)
+                    # 
+                    # Send traces to detection platform
+                    # for trace in traces:
+                        # self._send_trace(trace)
+                        # time.sleep(random.uniform(0.01, 0.05))  # Rapid I/O
+                        # 
+                    # file_count += 1
+                    # 
+                    # Simulate file encryption (rename to .encrypted)
+                    # encrypted_path = target_file.with_suffix('.encrypted')
+                    # if target_file.exists():
+                        # target_file.rename(encrypted_path)
+                    # 
+                    # if file_count % 10 == 0:
+                        # logger.info(f"Crypto simulation: {file_count} files processed")
+                        # 
+                # except Exception as e:
+                    # logger.error(f"Crypto simulation error: {e}")
+                    # 
+            # logger.info(f"CryptoLocker simulation completed: {file_count} files processed")
+            # 
+        # thread = threading.Thread(target=crypto_behavior, daemon=True)
+        # thread.start()
+        # self.running_simulations.append(thread)
+        # return thread
     def simulate_crypto_ransomware(self, duration=60):
-        """Simulate CryptoLocker-style ransomware behavior"""
-        logger.info("Starting CryptoLocker simulation...")
-        
+        """Generate MORE I/O operations - ransomware is aggressive"""
         def crypto_behavior():
             process_name = "crypto_sim.exe"
             pid = random.randint(2000, 9999)
-            
             start_time = time.time()
-            file_count = 0
+            operations_count = 0
             
             while time.time() - start_time < duration:
-                try:
-                    # Select random test file
-                    files = list(self.simulation_dir.glob("*.txt"))
+                # Process multiple files rapidly
+                files = list(self.simulation_dir.glob("*.txt"))
+                
+                for _ in range(min(5, len(files))):  # 5 files at a time
                     if not files:
                         break
                         
                     target_file = random.choice(files)
+                    file_size = target_file.stat().st_size
                     
-                    # Simulate ransomware I/O pattern
-                    traces = self._generate_crypto_traces(target_file, process_name, pid)
+                    # Generate 50-100 operations per file
+                    num_operations = random.randint(50, 100)
                     
-                    # Send traces to detection platform
-                    for trace in traces:
-                        self._send_trace(trace)
-                        time.sleep(random.uniform(0.01, 0.05))  # Rapid I/O
+                    for i in range(num_operations):
+                        offset = random.randint(0, max(1, file_size))
+                        size = random.randint(512, 4096)
                         
-                    file_count += 1
-                    
-                    # Simulate file encryption (rename to .encrypted)
-                    encrypted_path = target_file.with_suffix('.encrypted')
-                    if target_file.exists():
-                        target_file.rename(encrypted_path)
-                    
-                    if file_count % 10 == 0:
-                        logger.info(f"Crypto simulation: {file_count} files processed")
+                        # Read
+                        self._send_trace({
+                            "timestamp": time.time(),
+                            "operation_type": "read",
+                            "file_path": str(target_file),
+                            "offset": offset,
+                            "size": size,
+                            "process_id": pid,
+                            "process_name": process_name
+                        })
                         
-                except Exception as e:
-                    logger.error(f"Crypto simulation error: {e}")
+                        # Write immediately after
+                        self._send_trace({
+                            "timestamp": time.time(),
+                            "operation_type": "write",
+                            "file_path": str(target_file),
+                            "offset": offset,
+                            "size": size,
+                            "process_id": pid,
+                            "process_name": process_name
+                        })
+                        
+                        operations_count += 2
+                        
+                        # Very small delay - ransomware is FAST
+                        time.sleep(0.001)
                     
-            logger.info(f"CryptoLocker simulation completed: {file_count} files processed")
-            
-        thread = threading.Thread(target=crypto_behavior, daemon=True)
-        thread.start()
-        self.running_simulations.append(thread)
-        return thread
-        
+                    if operations_count % 100 == 0:
+                        print(f"Generated {operations_count} operations...")        
     def simulate_locker_ransomware(self, duration=30):
         """Simulate screen-locker ransomware behavior"""
         logger.info("Starting Locker simulation...")
