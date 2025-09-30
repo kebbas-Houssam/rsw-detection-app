@@ -69,7 +69,8 @@ class FileSystemMonitor(FileSystemEventHandler):
             Path.home() / "Pictures",
             Path.home() / "Desktop",
             Path.home() / "Videos",
-            Path("C:/Users/Public")
+            Path("C:/Users/Public"),
+            
         }
         
     def on_modified(self, event):
