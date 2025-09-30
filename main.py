@@ -104,7 +104,7 @@ class RansomwareDetector:
     def load_models(self):
         """Load pre-trained models or create simple ones"""
         try:
-            models_dir = Path("./models")
+            models_dir = Path("./new models")
             models_dir.mkdir(exist_ok=True)
             
             # Try to load existing models

@@ -1,0 +1,18 @@
+2025-09-30 06:28:55,849 - INFO - Created simple primary model
+2025-09-30 06:28:55,851 - INFO - Created simple XGBoost model
+2025-09-30 06:28:55,853 - INFO - All models loaded successfully
+2025-09-30 06:28:55,864 - INFO - Starting Ransomware Detection Server...
+2025-09-30 06:28:55,865 - INFO - Models loaded: Primary=True, XGBoost=True
+2025-09-30 06:28:57,903 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8000
+ * Running on http://192.168.8.100:8000
+2025-09-30 06:28:57,905 - INFO - [33mPress CTRL+C to quit[0m
+2025-09-30 06:29:38,297 - INFO - 127.0.0.1 - - [30/Sep/2025 06:29:38] "GET / HTTP/1.1" 200 -
+2025-09-30 06:29:38,721 - INFO - 127.0.0.1 - - [30/Sep/2025 06:29:38] "GET /socket.io/?EIO=4&transport=polling&t=PcP6GYQ HTTP/1.1" 200 -
+2025-09-30 06:29:38,760 - INFO - Client connected to WebSocket
+2025-09-30 06:29:38,762 - INFO - 127.0.0.1 - - [30/Sep/2025 06:29:38] "POST /socket.io/?EIO=4&transport=polling&t=PcP6GZ4&sid=8ZmczKWeCDBU33nhAAAA HTTP/1.1" 200 -
+2025-09-30 06:29:39,083 - INFO - 127.0.0.1 - - [30/Sep/2025 06:29:39] "GET /socket.io/?EIO=4&transport=polling&t=PcP6GZ9&sid=8ZmczKWeCDBU33nhAAAA HTTP/1.1" 200 -
+2025-09-30 06:29:39,087 - INFO - 127.0.0.1 - - [30/Sep/2025 06:29:39] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-09-30 06:29:44,007 - INFO - Client disconnected from WebSocket
+2025-09-30 06:29:44,009 - INFO - 127.0.0.1 - - [30/Sep/2025 06:29:44] "GET /socket.io/?EIO=4&transport=websocket&sid=8ZmczKWeCDBU33nhAAAA HTTP/1.1" 200 -
