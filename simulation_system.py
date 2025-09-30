@@ -214,9 +214,168 @@ class RansomwareSimulator:
         # thread.start()
         # self.running_simulations.append(thread)
         # return thread
+    def simulate_crypto_ransomware_direct(self):
+        """Direct injection - sends 100 traces immediately"""
+        process_name = "crypto_sim.exe"
+        pid = 9999
+        
+        print(f"\nDirect Crypto Injection: {process_name}")
+        print("Generating 100 I/O traces...")
+        
+        traces = []
+        base_time = time.time()
+        
+        for i in range(100):
+            offset = i * 4096
+            
+            # Read operation
+            traces.append({
+                "timestamp": base_time + (i * 0.01),
+                "operation_type": "read",
+                "file_path": "C:\\Users\\test\\document.pdf",
+                "offset": offset,
+                "size": 4096,
+                "process_id": pid,
+                "process_name": process_name
+            })
+            
+            # Write operation (encryption)
+            traces.append({
+                "timestamp": base_time + (i * 0.01) + 0.005,
+                "operation_type": "write",
+                "file_path": "C:\\Users\\test\\document.pdf",
+                "offset": offset,
+                "size": 4096,
+                "process_id": pid,
+                "process_name": process_name
+            })
+        
+        print(f"Sending {len(traces)} traces via batch API...")
+        
+        try:
+            response = requests.post(
+                f"{self.server_url}/traces/batch",
+                json=traces,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                print(f"\nBatch Result:")
+                print(f"  Traces processed: {result.get('traces_processed')}")
+                print(f"  Predictions made: {result.get('predictions_made')}")
+                
+                predictions = result.get('predictions', [])
+                if predictions:
+                    for pred in predictions:
+                        print(f"\n{'='*60}")
+                        print(f"DETECTION:")
+                        print(f"  Process: {pred['process_name']} (PID: {pred['process_id']})")
+                        print(f"  Primary: {pred['primary_prediction']:.4f}")
+                        print(f"  Hybrid: {pred['hybrid_prediction']:.4f}")
+                        print(f"  Risk: {pred['risk_level']}")
+                        print(f"  ALERT: {'YES' if pred['alert_triggered'] else 'NO'}")
+                        print(f"{'='*60}")
+                else:
+                    print("\nNo predictions generated (need more traces)")
+                    
+                    # Check buffer
+                    time.sleep(1)
+                    check = requests.get(f"{self.server_url}/debug/force_predict/{process_name}/{pid}")
+                    if check.status_code == 200:
+                        print(f"Buffer status: {check.json()}")
+            else:
+                print(f"Batch failed with status: {response.status_code}")
+                
+        except Exception as e:
+            print(f"Error: {e}")
+    
+    def simulate_locker_ransomware_direct(self):
+        """Direct locker simulation"""
+        process_name = "locker_sim.exe"
+        pid = 8888
+        
+        print(f"\nDirect Locker Injection: {process_name}")
+        
+        traces = []
+        base_time = time.time()
+        
+        system_files = [
+            "C:\\Windows\\System32\\kernel32.dll",
+            "C:\\Windows\\System32\\user32.dll",
+            "C:\\Windows\\System32\\ntdll.dll",
+            "C:\\Windows\\explorer.exe"
+        ]
+        
+        # Generate many rapid reads of system files
+        for i in range(50):
+            for sys_file in system_files:
+                traces.append({
+                    "timestamp": base_time + (len(traces) * 0.01),
+                    "operation_type": "read",
+                    "file_path": sys_file,
+                    "offset": i * 1000,
+                    "size": random.randint(1000, 10000),
+                    "process_id": pid,
+                    "process_name": process_name
+                })
+        
+        print(f"Sending {len(traces)} traces...")
+        self._send_batch(traces, process_name, pid)   
+    
+    def simulate_wiper_ransomware_direct(self):
+        """Direct wiper simulation"""
+        process_name = "wiper_sim.exe"
+        pid = 7777
+        
+        print(f"\nDirect Wiper Injection: {process_name}")
+        
+        traces = []
+        base_time = time.time()
+        
+        # Aggressive large writes
+        for i in range(100):
+            traces.append({
+                "timestamp": base_time + (i * 0.01),
+                "operation_type": "write",
+                "file_path": f"C:\\Users\\test\\important_{i % 10}.doc",
+                "offset": 0,
+                "size": random.randint(50000, 500000),
+                "process_id": pid,
+                "process_name": process_name
+            })
+        
+        print(f"Sending {len(traces)} traces...")
+        self._send_batch(traces, process_name, pid)   
+    
+    def _send_batch(self, traces, process_name, pid):
+        """Helper to send batch and show results"""
+        try:
+            response = requests.post(
+                f"{self.server_url}/traces/batch",
+                json=traces,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                print(f"Processed: {result.get('traces_processed')} traces")
+                
+                predictions = result.get('predictions', [])
+                if predictions:
+                    for pred in predictions:
+                        print(f"\nDETECTION: {pred['risk_level']} "
+                              f"(Hybrid: {pred['hybrid_prediction']:.4f})")
+                else:
+                    print("No predictions yet")
+                    
+        except Exception as e:
+            print(f"Error: {e}")    
+
+
     def simulate_crypto_ransomware(self, duration=60):
         """Send traces in batches for faster detection"""
-        def crypto_behavior():
+    def crypto_behavior():
             process_name = "crypto_sim.exe"
             pid = random.randint(2000, 9999)
             start_time = time.time()
@@ -424,6 +583,7 @@ class RansomwareSimulator:
 
 
 class SimulationController:
+    
     """Main controller for the simulation system"""
     
     def __init__(self, detection_server_url="http://localhost:8000"):
@@ -433,33 +593,34 @@ class SimulationController:
         self.running = False
         
     def start_simulation(self):
-        """Start the complete simulation system"""
-        print("\n" + "="*80)
-        print("🛡️  RANSOMWARE DETECTION SIMULATION SYSTEM")
-        print("    Master's Degree Defense - Live Demonstration")
-        print("="*80)
+        # """Start the complete simulation system"""
+        # print("\n" + "="*80)
+        # print("🛡️  RANSOMWARE DETECTION SIMULATION SYSTEM")
+        # print("    Master's Degree Defense - Live Demonstration")
+        # print("="*80)
+        # 
         
-        # Check if detection server is running
-        if not self._check_server():
-            print("❌ Detection server is not running!")
-            print("   Please start your detection platform first: python main.py")
-            return False
-            
-        print("✅ Detection server is running")
+        # if not self._check_server():
+            # print("❌ Detection server is not running!")
+            # print("   Please start your detection platform first: python main.py")
+            # return False
+            # 
+        # print("✅ Detection server is running")
+        # 
         
-        # Create test files
-        self.simulator.create_test_files(50)
+        # self.simulator.create_test_files(50)
         
-        # Start system monitoring
-        self.monitor.start_monitoring()
-        print("✅ System monitoring started")
         
+        # self.monitor.start_monitoring()
+        # print("✅ System monitoring started")
+        # 
+        print("System monitoring DISABLED for direct injection testing")
         self.running = True
         
         # Show menu
         self._show_menu()
         
-        return True
+        # return True
         
     def _check_server(self) -> bool:
         """Check if detection server is accessible"""
@@ -474,39 +635,31 @@ class SimulationController:
         while self.running:
             print("\n" + "-"*50)
             print("SIMULATION CONTROL MENU:")
-            print("1. Start CryptoLocker Simulation (60s)")
-            print("2. Start Screen Locker Simulation (30s)")
-            print("3. Start Data Wiper Simulation (45s)")
-            print("4. Start All Simulations")
+            print("1. CryptoLocker Direct Injection (Fast)")
+            print("2. Screen Locker Direct Injection (Fast)")
+            print("3. Data Wiper Direct Injection (Fast)")
+            print("4. CryptoLocker Slow Simulation (60s)")
             print("5. Generate Test Alert")
             print("6. Check System Status")
             print("7. View Recent Alerts")
-            print("8. Stop All Simulations")
             print("0. Exit")
             print("-"*50)
             
             try:
-                choice = input("Select option (0-8): ").strip()
+                choice = input("Select option (0-7): ").strip()
                 
                 if choice == "1":
-                    self.simulator.simulate_crypto_ransomware(60)
-                    print("🔄 CryptoLocker simulation started (60 seconds)")
+                    self.simulator.simulate_crypto_ransomware_direct()
                     
                 elif choice == "2":
-                    self.simulator.simulate_locker_ransomware(30)
-                    print("🔄 Screen Locker simulation started (30 seconds)")
+                    self.simulator.simulate_locker_ransomware_direct()
                     
                 elif choice == "3":
-                    self.simulator.simulate_wiper_ransomware(45)
-                    print("🔄 Data Wiper simulation started (45 seconds)")
+                    self.simulator.simulate_wiper_ransomware_direct()
                     
                 elif choice == "4":
                     self.simulator.simulate_crypto_ransomware(60)
-                    time.sleep(2)
-                    self.simulator.simulate_locker_ransomware(30)
-                    time.sleep(2)
-                    self.simulator.simulate_wiper_ransomware(45)
-                    print("🔄 All ransomware simulations started!")
+                    print("Slow simulation started (60 seconds)")
                     
                 elif choice == "5":
                     self._generate_test_alert()
@@ -517,17 +670,13 @@ class SimulationController:
                 elif choice == "7":
                     self._show_recent_alerts()
                     
-                elif choice == "8":
-                    print("🛑 Stopping all simulations...")
-                    self.running = False
-                    
                 elif choice == "0":
-                    print("👋 Exiting simulation system...")
+                    print("Exiting simulation system...")
                     self.running = False
                     
                 else:
-                    print("❌ Invalid option. Please select 0-8.")
-                    
+                    print("Invalid option. Please select 0-7.")
+
             except KeyboardInterrupt:
                 print("\n🛑 Interrupted by user")
                 self.running = False
