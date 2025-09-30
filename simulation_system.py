@@ -214,22 +214,26 @@ class RansomwareSimulator:
         # thread.start()
         # self.running_simulations.append(thread)
         # return thread
+    
+    
+    
+    
     def simulate_crypto_ransomware_direct(self):
-        """Direct injection - sends 100 traces immediately"""
+        """Direct injection - sends traces individually but rapidly"""
         process_name = "crypto_sim.exe"
         pid = 9999
         
         print(f"\nDirect Crypto Injection: {process_name}")
-        print("Generating 100 I/O traces...")
+        print("Generating and sending 100 traces rapidly...")
         
-        traces = []
         base_time = time.time()
+        sent_count = 0
         
         for i in range(100):
             offset = i * 4096
             
             # Read operation
-            traces.append({
+            trace_read = {
                 "timestamp": base_time + (i * 0.01),
                 "operation_type": "read",
                 "file_path": "C:\\Users\\test\\document.pdf",
@@ -237,10 +241,10 @@ class RansomwareSimulator:
                 "size": 4096,
                 "process_id": pid,
                 "process_name": process_name
-            })
+            }
             
-            # Write operation (encryption)
-            traces.append({
+            # Write operation
+            trace_write = {
                 "timestamp": base_time + (i * 0.01) + 0.005,
                 "operation_type": "write",
                 "file_path": "C:\\Users\\test\\document.pdf",
@@ -248,48 +252,44 @@ class RansomwareSimulator:
                 "size": 4096,
                 "process_id": pid,
                 "process_name": process_name
-            })
+            }
+            
+            # Send immediately - no delay
+            try:
+                requests.post(f"{self.server_url}/predict", json=trace_read, timeout=1)
+                requests.post(f"{self.server_url}/predict", json=trace_write, timeout=1)
+                sent_count += 2
+            except:
+                pass
         
-        print(f"Sending {len(traces)} traces via batch API...")
+        print(f"Sent {sent_count} traces")
+        
+        # Now force prediction
+        time.sleep(1)
+        print(f"\nForcing prediction for {process_name}_{pid}...")
         
         try:
-            response = requests.post(
-                f"{self.server_url}/traces/batch",
-                json=traces,
-                timeout=10
+            response = requests.get(
+                f"{self.server_url}/debug/force_predict/{process_name}/{pid}",
+                timeout=5
             )
             
             if response.status_code == 200:
                 result = response.json()
-                print(f"\nBatch Result:")
-                print(f"  Traces processed: {result.get('traces_processed')}")
-                print(f"  Predictions made: {result.get('predictions_made')}")
-                
-                predictions = result.get('predictions', [])
-                if predictions:
-                    for pred in predictions:
-                        print(f"\n{'='*60}")
-                        print(f"DETECTION:")
-                        print(f"  Process: {pred['process_name']} (PID: {pred['process_id']})")
-                        print(f"  Primary: {pred['primary_prediction']:.4f}")
-                        print(f"  Hybrid: {pred['hybrid_prediction']:.4f}")
-                        print(f"  Risk: {pred['risk_level']}")
-                        print(f"  ALERT: {'YES' if pred['alert_triggered'] else 'NO'}")
-                        print(f"{'='*60}")
-                else:
-                    print("\nNo predictions generated (need more traces)")
-                    
-                    # Check buffer
-                    time.sleep(1)
-                    check = requests.get(f"{self.server_url}/debug/force_predict/{process_name}/{pid}")
-                    if check.status_code == 200:
-                        print(f"Buffer status: {check.json()}")
+                print(f"\n{'='*60}")
+                print(f"PREDICTION RESULT:")
+                print(f"  Buffer size: {result.get('buffer_len', 0)}")
+                print(f"  Primary score: {result.get('primary', 0):.4f}")
+                print(f"  Hybrid score: {result.get('hybrid', 0):.4f}")
+                print(f"  Risk level: {result.get('risk', 'UNKNOWN')}")
+                print(f"  Status: {result.get('ok', False)}")
+                print(f"{'='*60}")
             else:
-                print(f"Batch failed with status: {response.status_code}")
+                print(f"Force predict failed: {response.status_code}")
+                print(f"Response: {response.text}")
                 
         except Exception as e:
             print(f"Error: {e}")
-    
     def simulate_locker_ransomware_direct(self):
         """Direct locker simulation"""
         process_name = "locker_sim.exe"
