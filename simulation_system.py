@@ -215,60 +215,70 @@ class RansomwareSimulator:
         # self.running_simulations.append(thread)
         # return thread
     def simulate_crypto_ransomware(self, duration=60):
-        """Generate MORE I/O operations - ransomware is aggressive"""
+        """Send traces in batches for faster detection"""
         def crypto_behavior():
             process_name = "crypto_sim.exe"
             pid = random.randint(2000, 9999)
             start_time = time.time()
-            operations_count = 0
             
             while time.time() - start_time < duration:
-                # Process multiple files rapidly
                 files = list(self.simulation_dir.glob("*.txt"))
+                if not files:
+                    break
                 
-                for _ in range(min(5, len(files))):  # 5 files at a time
-                    if not files:
-                        break
-                        
-                    target_file = random.choice(files)
-                    file_size = target_file.stat().st_size
+                target_file = random.choice(files)
+                
+                # Generate batch of 60 traces (more than sequence_length=50)
+                traces_batch = []
+                
+                for i in range(60):
+                    offset = random.randint(0, 10000)
+                    size = random.randint(512, 8192)
                     
-                    # Generate 50-100 operations per file
-                    num_operations = random.randint(50, 100)
+                    # Read trace
+                    traces_batch.append({
+                        "timestamp": time.time() + (i * 0.001),
+                        "operation_type": "read",
+                        "file_path": str(target_file),
+                        "offset": offset,
+                        "size": size,
+                        "process_id": pid,
+                        "process_name": process_name
+                    })
                     
-                    for i in range(num_operations):
-                        offset = random.randint(0, max(1, file_size))
-                        size = random.randint(512, 4096)
-                        
-                        # Read
-                        self._send_trace({
-                            "timestamp": time.time(),
-                            "operation_type": "read",
-                            "file_path": str(target_file),
-                            "offset": offset,
-                            "size": size,
-                            "process_id": pid,
-                            "process_name": process_name
-                        })
-                        
-                        # Write immediately after
-                        self._send_trace({
-                            "timestamp": time.time(),
-                            "operation_type": "write",
-                            "file_path": str(target_file),
-                            "offset": offset,
-                            "size": size,
-                            "process_id": pid,
-                            "process_name": process_name
-                        })
-                        
-                        operations_count += 2
-                        
-                        # Very small delay - ransomware is FAST
-                        time.sleep(0.001)
+                    # Write trace
+                    traces_batch.append({
+                        "timestamp": time.time() + (i * 0.001) + 0.0005,
+                        "operation_type": "write",
+                        "file_path": str(target_file),
+                        "offset": offset,
+                        "size": size,
+                        "process_id": pid,
+                        "process_name": process_name
+                    })
+                
+                # Send batch
+                print(f"Sending batch of {len(traces_batch)} traces for {process_name}...")
+                
+                try:
+                    response = requests.post(
+                        f"{self.server_url}/traces/batch",
+                        json=traces_batch,
+                        timeout=5
+                    )
                     
-                    if operations_count % 100 == 0:
-                        print(f"Generated {operations_count} operations...")        
+                    if response.status_code == 200:
+                        result = response.json()
+                        print(f"  Batch processed: {result.get('traces_processed')} traces")
+                        print(f"  Predictions made: {result.get('predictions_made')}")
+                        
+                        if result.get('predictions'):
+                            for pred in result['predictions']:
+                                print(f"  PREDICTION: {pred.get('hybrid_prediction', 0):.4f} - {pred.get('risk_level')}")
+                except Exception as e:
+                    print(f"  Batch send error: {e}")
+                
+                time.sleep(2)  # Wait between batches      
     def simulate_locker_ransomware(self, duration=30):
         """Simulate screen-locker ransomware behavior"""
         logger.info("Starting Locker simulation...")
