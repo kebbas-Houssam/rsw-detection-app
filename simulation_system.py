@@ -167,277 +167,54 @@ class RansomwareSimulator:
                 f.write(content)
         logger.info(f"Created {count} test files in {self.simulation_dir}")
         
-    # def simulate_crypto_ransomware(self, duration=60):
-        # """Simulate CryptoLocker-style ransomware behavior"""
-        # logger.info("Starting CryptoLocker simulation...")
-        # 
-        # def crypto_behavior():
-            # process_name = "crypto_sim.exe"
-            # pid = random.randint(2000, 9999)
-            # 
-            # start_time = time.time()
-            # file_count = 0
-            # 
-            # while time.time() - start_time < duration:
-                # try:
-                    # Select random test file
-                    # files = list(self.simulation_dir.glob("*.txt"))
-                    # if not files:
-                        # break
-                        # 
-                    # target_file = random.choice(files)
-                    # 
-                    # Simulate ransomware I/O pattern
-                    # traces = self._generate_crypto_traces(target_file, process_name, pid)
-                    # 
-                    # Send traces to detection platform
-                    # for trace in traces:
-                        # self._send_trace(trace)
-                        # time.sleep(random.uniform(0.01, 0.05))  # Rapid I/O
-                        # 
-                    # file_count += 1
-                    # 
-                    # Simulate file encryption (rename to .encrypted)
-                    # encrypted_path = target_file.with_suffix('.encrypted')
-                    # if target_file.exists():
-                        # target_file.rename(encrypted_path)
-                    # 
-                    # if file_count % 10 == 0:
-                        # logger.info(f"Crypto simulation: {file_count} files processed")
-                        # 
-                # except Exception as e:
-                    # logger.error(f"Crypto simulation error: {e}")
-                    # 
-            # logger.info(f"CryptoLocker simulation completed: {file_count} files processed")
-            # 
-        # thread = threading.Thread(target=crypto_behavior, daemon=True)
-        # thread.start()
-        # self.running_simulations.append(thread)
-        # return thread
-    
-    
-    
-    
-    def simulate_crypto_ransomware_direct(self):
-        """Direct injection - sends traces individually but rapidly"""
-        process_name = "crypto_sim.exe"
-        pid = 9999
-        
-        print(f"\nDirect Crypto Injection: {process_name}")
-        print("Generating and sending 100 traces rapidly...")
-        
-        base_time = time.time()
-        sent_count = 0
-        
-        for i in range(100):
-            offset = i * 4096
-            
-            # Read operation
-            trace_read = {
-                "timestamp": base_time + (i * 0.01),
-                "operation_type": "read",
-                "file_path": "C:\\Users\\test\\document.pdf",
-                "offset": offset,
-                "size": 4096,
-                "process_id": pid,
-                "process_name": process_name
-            }
-            
-            # Write operation
-            trace_write = {
-                "timestamp": base_time + (i * 0.01) + 0.005,
-                "operation_type": "write",
-                "file_path": "C:\\Users\\test\\document.pdf",
-                "offset": offset,
-                "size": 4096,
-                "process_id": pid,
-                "process_name": process_name
-            }
-            
-            # Send immediately - no delay
-            try:
-                requests.post(f"{self.server_url}/predict", json=trace_read, timeout=1)
-                requests.post(f"{self.server_url}/predict", json=trace_write, timeout=1)
-                sent_count += 2
-            except:
-                pass
-        
-        print(f"Sent {sent_count} traces")
-        
-        # Now force prediction
-        time.sleep(1)
-        print(f"\nForcing prediction for {process_name}_{pid}...")
-        
-        try:
-            response = requests.get(
-                f"{self.server_url}/debug/force_predict/{process_name}/{pid}",
-                timeout=5
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                print(f"\n{'='*60}")
-                print(f"PREDICTION RESULT:")
-                print(f"  Buffer size: {result.get('buffer_len', 0)}")
-                print(f"  Primary score: {result.get('primary', 0):.4f}")
-                print(f"  Hybrid score: {result.get('hybrid', 0):.4f}")
-                print(f"  Risk level: {result.get('risk', 'UNKNOWN')}")
-                print(f"  Status: {result.get('ok', False)}")
-                print(f"{'='*60}")
-            else:
-                print(f"Force predict failed: {response.status_code}")
-                print(f"Response: {response.text}")
-                
-        except Exception as e:
-            print(f"Error: {e}")
-    def simulate_locker_ransomware_direct(self):
-        """Direct locker simulation"""
-        process_name = "locker_sim.exe"
-        pid = 8888
-        
-        print(f"\nDirect Locker Injection: {process_name}")
-        
-        traces = []
-        base_time = time.time()
-        
-        system_files = [
-            "C:\\Windows\\System32\\kernel32.dll",
-            "C:\\Windows\\System32\\user32.dll",
-            "C:\\Windows\\System32\\ntdll.dll",
-            "C:\\Windows\\explorer.exe"
-        ]
-        
-        # Generate many rapid reads of system files
-        for i in range(50):
-            for sys_file in system_files:
-                traces.append({
-                    "timestamp": base_time + (len(traces) * 0.01),
-                    "operation_type": "read",
-                    "file_path": sys_file,
-                    "offset": i * 1000,
-                    "size": random.randint(1000, 10000),
-                    "process_id": pid,
-                    "process_name": process_name
-                })
-        
-        print(f"Sending {len(traces)} traces...")
-        self._send_batch(traces, process_name, pid)   
-    
-    def simulate_wiper_ransomware_direct(self):
-        """Direct wiper simulation"""
-        process_name = "wiper_sim.exe"
-        pid = 7777
-        
-        print(f"\nDirect Wiper Injection: {process_name}")
-        
-        traces = []
-        base_time = time.time()
-        
-        # Aggressive large writes
-        for i in range(100):
-            traces.append({
-                "timestamp": base_time + (i * 0.01),
-                "operation_type": "write",
-                "file_path": f"C:\\Users\\test\\important_{i % 10}.doc",
-                "offset": 0,
-                "size": random.randint(50000, 500000),
-                "process_id": pid,
-                "process_name": process_name
-            })
-        
-        print(f"Sending {len(traces)} traces...")
-        self._send_batch(traces, process_name, pid)   
-    
-    def _send_batch(self, traces, process_name, pid):
-        """Helper to send batch and show results"""
-        try:
-            response = requests.post(
-                f"{self.server_url}/traces/batch",
-                json=traces,
-                timeout=10
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                print(f"Processed: {result.get('traces_processed')} traces")
-                
-                predictions = result.get('predictions', [])
-                if predictions:
-                    for pred in predictions:
-                        print(f"\nDETECTION: {pred['risk_level']} "
-                              f"(Hybrid: {pred['hybrid_prediction']:.4f})")
-                else:
-                    print("No predictions yet")
-                    
-        except Exception as e:
-            print(f"Error: {e}")    
-
-
     def simulate_crypto_ransomware(self, duration=60):
-        """Send traces in batches for faster detection"""
-    def crypto_behavior():
+        """Simulate CryptoLocker-style ransomware behavior"""
+        logger.info("Starting CryptoLocker simulation...")
+        
+        def crypto_behavior():
             process_name = "crypto_sim.exe"
             pid = random.randint(2000, 9999)
+            
             start_time = time.time()
+            file_count = 0
             
             while time.time() - start_time < duration:
-                files = list(self.simulation_dir.glob("*.txt"))
-                if not files:
-                    break
-                
-                target_file = random.choice(files)
-                
-                # Generate batch of 60 traces (more than sequence_length=50)
-                traces_batch = []
-                
-                for i in range(60):
-                    offset = random.randint(0, 10000)
-                    size = random.randint(512, 8192)
-                    
-                    # Read trace
-                    traces_batch.append({
-                        "timestamp": time.time() + (i * 0.001),
-                        "operation_type": "read",
-                        "file_path": str(target_file),
-                        "offset": offset,
-                        "size": size,
-                        "process_id": pid,
-                        "process_name": process_name
-                    })
-                    
-                    # Write trace
-                    traces_batch.append({
-                        "timestamp": time.time() + (i * 0.001) + 0.0005,
-                        "operation_type": "write",
-                        "file_path": str(target_file),
-                        "offset": offset,
-                        "size": size,
-                        "process_id": pid,
-                        "process_name": process_name
-                    })
-                
-                # Send batch
-                print(f"Sending batch of {len(traces_batch)} traces for {process_name}...")
-                
                 try:
-                    response = requests.post(
-                        f"{self.server_url}/traces/batch",
-                        json=traces_batch,
-                        timeout=5
-                    )
                     
-                    if response.status_code == 200:
-                        result = response.json()
-                        print(f"  Batch processed: {result.get('traces_processed')} traces")
-                        print(f"  Predictions made: {result.get('predictions_made')}")
+                    files = list(self.simulation_dir.glob("*.txt"))
+                    if not files:
+                        break
                         
-                        if result.get('predictions'):
-                            for pred in result['predictions']:
-                                print(f"  PREDICTION: {pred.get('hybrid_prediction', 0):.4f} - {pred.get('risk_level')}")
+                    target_file = random.choice(files)
+                    
+                    
+                    traces = self._generate_crypto_traces(target_file, process_name, pid)
+                    
+                    
+                    for trace in traces:
+                        self._send_trace(trace)
+                        time.sleep(random.uniform(0.01, 0.05))  # Rapid I/O
+                        
+                    file_count += 1
+                    
+                    
+                    encrypted_path = target_file.with_suffix('.encrypted')
+                    if target_file.exists():
+                        target_file.rename(encrypted_path)
+                    
+                    if file_count % 10 == 0:
+                        logger.info(f"Crypto simulation: {file_count} files processed")
+                        
                 except Exception as e:
-                    print(f"  Batch send error: {e}")
-                
-                time.sleep(2)  # Wait between batches      
+                    logger.error(f"Crypto simulation error: {e}")
+                    
+            logger.info(f"CryptoLocker simulation completed: {file_count} files processed")
+            
+        thread = threading.Thread(target=crypto_behavior, daemon=True)
+        thread.start()
+        self.running_simulations.append(thread)
+        return thread
+        """Send traces in batches for faster detection"""
     def simulate_locker_ransomware(self, duration=30):
         """Simulate screen-locker ransomware behavior"""
         logger.info("Starting Locker simulation...")
@@ -489,7 +266,7 @@ class RansomwareSimulator:
         logger.info("Starting Wiper simulation...")
         
         def wiper_behavior():
-            process_name = "wiper_sim.exe"
+            process_name = "crypto_sim.exe"
             pid = random.randint(4000, 9999)
             
             start_time = time.time()
@@ -521,9 +298,9 @@ class RansomwareSimulator:
                     time.sleep(random.uniform(0.1, 0.3))  # Aggressive timing
                     
                 except Exception as e:
-                    logger.error(f"Wiper simulation error: {e}")
+                    logger.error(f"crybtoRan simulation error: {e}")
                     
-            logger.info(f"Wiper simulation completed: {files_wiped} operations")
+            logger.info(f"crybtoRan simulation completed: {files_wiped} operations")
             
         thread = threading.Thread(target=wiper_behavior, daemon=True)
         thread.start()
@@ -583,7 +360,6 @@ class RansomwareSimulator:
 
 
 class SimulationController:
-    
     """Main controller for the simulation system"""
     
     def __init__(self, detection_server_url="http://localhost:8000"):
@@ -593,34 +369,33 @@ class SimulationController:
         self.running = False
         
     def start_simulation(self):
-        # """Start the complete simulation system"""
-        # print("\n" + "="*80)
-        # print("🛡️  RANSOMWARE DETECTION SIMULATION SYSTEM")
-        # print("    Master's Degree Defense - Live Demonstration")
-        # print("="*80)
-        # 
+        """Start the complete simulation system"""
+        print("\n" + "="*80)
+        print("🛡️  RANSOMWARE DETECTION SIMULATION SYSTEM")
+        print("    Master's Degree Defense - Live Demonstration")
+        print("="*80)
         
-        # if not self._check_server():
-            # print("❌ Detection server is not running!")
-            # print("   Please start your detection platform first: python main.py")
-            # return False
-            # 
-        # print("✅ Detection server is running")
-        # 
+        # Check if detection server is running
+        if not self._check_server():
+            print("❌ Detection server is not running!")
+            print("   Please start your detection platform first: python main.py")
+            return False
+            
+        print("✅ Detection server is running")
         
-        # self.simulator.create_test_files(50)
+        # Create test files
+        self.simulator.create_test_files(50)
         
+        # Start system monitoring
+        self.monitor.start_monitoring()
+        print("✅ System monitoring started")
         
-        # self.monitor.start_monitoring()
-        # print("✅ System monitoring started")
-        # 
-        print("System monitoring DISABLED for direct injection testing")
         self.running = True
         
         # Show menu
         self._show_menu()
         
-        # return True
+        return True
         
     def _check_server(self) -> bool:
         """Check if detection server is accessible"""
@@ -635,31 +410,39 @@ class SimulationController:
         while self.running:
             print("\n" + "-"*50)
             print("SIMULATION CONTROL MENU:")
-            print("1. CryptoLocker Direct Injection (Fast)")
-            print("2. Screen Locker Direct Injection (Fast)")
-            print("3. Data Wiper Direct Injection (Fast)")
-            print("4. CryptoLocker Slow Simulation (60s)")
+            print("1. Start Data Wiper Simulation (60s)")
+            print("2. Start Screen Locker Simulation (30s)")
+            print("3. Start Crybto Loker Simulation (45s)")
+            print("4. Start All Simulations")
             print("5. Generate Test Alert")
             print("6. Check System Status")
             print("7. View Recent Alerts")
+            print("8. Stop All Simulations")
             print("0. Exit")
             print("-"*50)
             
             try:
-                choice = input("Select option (0-7): ").strip()
+                choice = input("Select option (0-8): ").strip()
                 
                 if choice == "1":
-                    self.simulator.simulate_crypto_ransomware_direct()
+                    self.simulator.simulate_crypto_ransomware(60)
+                    print("🔄 Data Wiper simulation started (60 seconds)")
                     
                 elif choice == "2":
-                    self.simulator.simulate_locker_ransomware_direct()
+                    self.simulator.simulate_locker_ransomware(30)
+                    print("🔄 Screen Locker simulation started (30 seconds)")
                     
                 elif choice == "3":
-                    self.simulator.simulate_wiper_ransomware_direct()
+                    self.simulator.simulate_wiper_ransomware(45)
+                    print("🔄 Crybto Locker simulation started (45 seconds)")
                     
                 elif choice == "4":
                     self.simulator.simulate_crypto_ransomware(60)
-                    print("Slow simulation started (60 seconds)")
+                    time.sleep(2)
+                    self.simulator.simulate_locker_ransomware(30)
+                    time.sleep(2)
+                    self.simulator.simulate_wiper_ransomware(45)
+                    print("🔄 All ransomware simulations started!")
                     
                 elif choice == "5":
                     self._generate_test_alert()
@@ -670,13 +453,17 @@ class SimulationController:
                 elif choice == "7":
                     self._show_recent_alerts()
                     
+                elif choice == "8":
+                    print("🛑 Stopping all simulations...")
+                    self.running = False
+                    
                 elif choice == "0":
-                    print("Exiting simulation system...")
+                    print("👋 Exiting simulation system...")
                     self.running = False
                     
                 else:
-                    print("Invalid option. Please select 0-7.")
-
+                    print("❌ Invalid option. Please select 0-8.")
+                    
             except KeyboardInterrupt:
                 print("\n🛑 Interrupted by user")
                 self.running = False
